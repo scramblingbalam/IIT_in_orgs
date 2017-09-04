@@ -9,7 +9,25 @@ import igraph as ig
 import random as ran
 import time 
 
-
+def find_all_paths(graph, start, end, mode = 'OUT', maxlen = None):
+    def find_all_paths_aux(adjlist, start, end, path, maxlen = None):
+        path = path + [start]
+        if start == end:
+            return [path]
+        paths = []
+        if maxlen is None or len(path) <= maxlen:
+            for node in adjlist[start] - set(path):
+                paths.extend(find_all_paths_aux(adjlist, node, end, path, maxlen))
+        return paths
+    adjlist = [set(graph.neighbors(node, mode = mode)) \
+        for node in range(graph.vcount())]
+    all_paths = []
+    start = start if type(start) is list else [start]
+    end = end if type(end) is list else [end]
+    for s in start:
+        for e in end:
+            all_paths.extend(find_all_paths_aux(adjlist, s, e, [], maxlen))
+    return all_paths
 
 def create_random(n,m):
     g = ig.Graph()
@@ -35,46 +53,4 @@ print(paths)
 print(time.time())
 
 
-#print(G)
-#cluster = G.transitivity_undirected()
-#print("clustering coefficient", cluster)
-#print("num edges",len(G.get_edgelist()))
-##G.to_directed(mutual=False)
-#G.to_directed(mutual=True)
-#print("num edges",len(G.get_edgelist()))
-#tc = G.triad_census()
-#print(tc["300"])
-#start = time.time()
-#paths = G.get_all_shortest_paths(0,to=1)
-#end = time.time()
-#print(paths)
-#print(end-start)
-#
-#start =time.time()
-#cuts = G.all_st_cuts(0,1)
-#end = time.time()
-#print(cuts)
-#print(end-start)
-#
-#start = time.time()
-#paths = G.get_all_simple_paths(0, to=1)
-#end = time.time()
-#print(paths)
-#print(time.time())
-#
-#tris = [
-#"120D",
-#"120U",
-#"120C",
-##"210C",
-#"300"]
-##print(type(tris[3]))
-#
-#tot_tris = [tc[i] for i in tris]
-#
-#print(len(G.get_edgelist())*cluster)
-#print(tot_tris)
 
-#from optparse import OptionParser
-#import inspect
-#inspect.getmembers(OptionParser, predicate=inspect.ismethod)
