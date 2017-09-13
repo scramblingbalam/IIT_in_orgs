@@ -39,9 +39,7 @@ def find_all_paths(graph, start, end, mode = 'OUT', maxlen = None):
 def find_all_paths_Mongo(paths_coll_str,graphColl, start, end, mode = 'OUT', maxlen = None,deliminator = ','):
     path_coll = db[paths_coll_str+"start{}_end{}".format(start,end)]
     def find_all_paths_Mongo_aux(path_coll,adjlist,graphColl, start, end, path, maxlen = None):
-#        path = list(pathColl.find({'_id':'{}->{}'.format(start,end)}))
         path = path + [start]
-#        print("start",start)
         if start == end:
             try:
                 path_str = deliminator.join(map(str,path))
@@ -52,23 +50,15 @@ def find_all_paths_Mongo(paths_coll_str,graphColl, start, end, mode = 'OUT', max
                     pass
                 else:
                     print(err)
-                    sys.exit()
-                    
-                        
+                    sys.exit()            
+
         paths = []
         if maxlen is None or len(path) <= maxlen:
-#            neighbors = list(graphColl.find({'_id':start}))[0]['neighbors_{}'.format(mode)]
-#            print([node for node in set(neighbors) - set(path)])
-#            print([node for node in adjlist[start] - set(path)])
             for node in set(adjlist[start]) - set(path):
                 paths.extend(find_all_paths_Mongo_aux(path_coll,adjlist,graphColl, node, end, path, maxlen))
         return paths
-#    adjlist = [set(graph.neighbors(node, mode = mode)) \
-#        for node in range(graph.vcount())]
     adjlist = [set(list(graphColl.find({'_id':start}))[0]['neighbors_{}'.format(mode)])
                 for start in graphColl.distinct('_id')]
-#    print("ADJlistMONGO == ADJLIST?",adjlist==adjlistM)
-#    all_paths = []
     start = start if type(start) is list else [start]
     end = end if type(end) is list else [end]
     for s in start:
@@ -90,6 +80,13 @@ def create_random(n,m):
 #    for edge in edges:
 #        g.add_edge(edge[0],edge[1])
     g.add_edges(sorted(edges))
+    return g
+
+def create_full_directed(n):
+    g = ig.Graph(directed =True)
+    g.add_vertices(n)
+    node_mat = list(it.permutations(range(n),2))
+    g.add_edges(sorted(node_mat))
     return g
 
 def igraph2mongo(graph,collection,mode='OUT',overwrite = False):
@@ -155,6 +152,36 @@ def nodes4density(d,e):
     bottom = d**0.5
     return int(abs(((top/bottom)+1)*0.5))
 
+
+def reciprocity_ratio(gd):
+    """
+    takes a directed igraph graph as input and outputs it's reciprocity ratio
+    """
+    reciprocal = 0.0
+    edge_list  = gd.get_edgelist()
+    for i in it.permutations(range(gd.vcount()),2):
+        if i in edge_list and i[::-1] in edge_list:
+            reciprocal += 1.0
+    return reciprocal/gd.ecount()
+
+
+     
+
+"""
+clustering coefficent calc for R
+library(igraph)
+# Calculate igraph's transitivity
+G <- erdos.renyi.game(20, .5, "gnp")
+igraphTrans <- transitivity(G)
+# Calculate transitivity from my formula
+ A <- as_adj(G)
+A2 <- crossprod(A) # A^2
+numerator <- sum(diag(crossprod(A2, A))) # trace(A^3)
+denominator <- sum(A2) 
+myTrans <- numerator/denominator
+"""
+
+
 if __name__ == "__main__":
     client = MongoClient()
     client = MongoClient('localhost', 27017)
@@ -178,7 +205,16 @@ if __name__ == "__main__":
     print(nodes)
     density = graph_density(n,edges)
     print("Density",density)
-    
+    G = create_random(20,200)
+    rr = reciprocity_ratio(G)
+    print("reciprocity reatio",rr)
+    G = ig.Graph.Full(10,directed =True)
+    print(G.ecount())
+    print(G.density())
+    print(graph_density(G.vcount(),G.ecount()))
+    rr = reciprocity_ratio(G)
+    print("reciprocity ratio",rr)    
+
 #    coll_graph = db["node{}_edge{}_p{}%_r{}%_graph".format(n,m,int(p*100),int(r*100))]
 #    ### string that will act as a template for each paths collection 
 #    coll_paths_str = "node{}_edge{}_p{}%_r{}%_paths_".format(n,m,int(p*100),int(r*100),mode)
