@@ -148,8 +148,12 @@ def edges4density(D,V,directed = True):
         x = 1
     else:
         x = 2
-    return (D*(V * (V-1)))/x
+    return int((D*(V * (V-1)))/x)
 
+def nodes4density(d,e):
+    top = (d + (4*e))**0.5
+    bottom = d**0.5
+    return int(abs(((top/bottom)+1)*0.5))
 
 if __name__ == "__main__":
     client = MongoClient()
@@ -166,10 +170,15 @@ if __name__ == "__main__":
     print("Nodes",n,"Edges",m,"Prob Triads",p,"Reciprocity",r)
     density = graph_density(n,m)
     print("Density",density)
-    edges = edges4density(density,20)
+    edges = edges4density(density,n)
     print(edges)
     density = graph_density(n,edges)
     print("Density",density)
+    nodes = nodes4density(density,m)
+    print(nodes)
+    density = graph_density(n,edges)
+    print("Density",density)
+    
 #    coll_graph = db["node{}_edge{}_p{}%_r{}%_graph".format(n,m,int(p*100),int(r*100))]
 #    ### string that will act as a template for each paths collection 
 #    coll_paths_str = "node{}_edge{}_p{}%_r{}%_paths_".format(n,m,int(p*100),int(r*100),mode)
