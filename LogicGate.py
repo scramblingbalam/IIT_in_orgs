@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Sep 24 14:36:05 2017
-
-@author: scram
-"""
 import numpy as np
 import itertools as it
 from collections import Counter
@@ -68,72 +62,25 @@ def states_list(node_num,states = 2):
 
 
 def vec_combine(vec,vecInsert,indexInsert,typeOut=list,axis=0):
-    vec_a = np.array(vec)
-    vecInsert_a = np.array(vecInsert)
-    insert_shape = vecInsert_a.shape
-    vec_shape = vec_a.shape
-    vec_a = np.array(vec*insert_shape[0])
-    vec_a = turn(vec_a)
-    vecInsert_a = np.array(vecInsert*vec_shape[0])
-    vec_a = np.insert(vec_a,indexInsert,vecInsert_a,axis=axis)
-    
-    vec_a = turn(vec_a)
-    set_len = len(set(map(tuple,vec_a)))
-    if len(vec_a)==set_len:
-        return nested.map_list(typeOut,vec_a)
-    else:
-        vec = vec[::-1]
-        vec_a = np.array(vec)
-        vecInsert_a = np.array(vecInsert)
-        insert_shape = vecInsert_a.shape
-        vec_shape = vec_a.shape
-        vec_a = np.array(vec*insert_shape[0])
-        vec_a = turn(vec_a)
-        vecInsert_a = np.array(vecInsert*vec_shape[0])
-        vec_a = np.insert(vec_a,indexInsert,vecInsert_a,axis=axis)
-        vec_a = np.insert(vec_a,indexInsert,vecInsert_a,axis=axis)
+    combined = []
+    for i in vec:
+        for j in vecInsert:
+            i_copy = i.copy()
+            i_copy.insert(indexInsert,j)
+            combined.append(np.array(i_copy))
+    combined = np.vstack(combined)
+#    print("\nCOMBINED",combined,"\n")
+    return nested.map_list(typeOut,combined)
         
-        vec_a = turn(vec_a)
-        
-        return nested.map_list(typeOut,vec_a)
-
-def vec_combine(vec,vecInsert,indexInsert,typeOut=list,axis=0):
-    vec_a = np.array(vec)
-    vecInsert_a = np.array(vecInsert)
-    insert_shape = vecInsert_a.shape
-    vec_shape = vec_a.shape
-    vec_a = np.array(vec*insert_shape[0])
-    vec_a = turn(vec_a)
-    vecIplus = vecInsert.copy()
-    print(vecIplus)
-    print(vec_shape,insert_shape)
-    for i in range(vec_shape[0]-1):
-        if i%2==0:
-            print(i,"I1")
-            vecIplus+=vecInsert[::-1]
-        else:
-            print(i,"I2")
-            vecIplus+=vecInsert
-        print(i,vecIplus)
-    vecInsert_a = np.array(vecIplus)
-    print(vecInsert_a,"VECAAAA",len(vecInsert_a),vecInsert*vec_shape[0])
-#    vecInsert_a = np.array(vecInsert*vec_shape[0])
-    vec_a = np.insert(vec_a,indexInsert,vecInsert_a,axis=axis)
-    
-    vec_a = turn(vec_a)
-    
-    return nested.map_list(typeOut,vec_a)
-
-        
-def past(current_state,table,index,noise=[0,1]):
+def past(current_state,truth_table,index,noise=[0,1]):
     past_states =[]
-    for inputs,output in table.items():
-        print(output,inputs,current_state[index])
+    for inputs,output in truth_table.items():
+#        print(output,inputs,current_state[index])
         if output == current_state[index]:
             past_states.append(list(inputs))
-    print(past_states)
+#    print("VecCombine Inputs\n",past_states)
     past_states = vec_combine(past_states,noise,index)
-    print(past_states)
+#    print("VecCombine Outputs\n",past_states)
     past_prob = 1/len(past_states)
     return np.array([past_prob if i in past_states else 0 for i in states_list(len(current_state))])
 
@@ -163,67 +110,13 @@ def subMat4dif(dif,mat):
     submat = submat[:,np.all(submat,axis=0)]
     return submat,dif[dif>0],dif[dif<=0]
 
-def subPhi(dists, holes, piles):
-    hole_sort = np.argsort(holes)[::-1]
-    dif_vec = []
-    costs = []
-#    print(dists,"Dist",holes,"holes",piles,"Piles",hole_sort)
-#    print(hole_sort)
-#    print(dists[hole_sort],"Dist_sort",holes[hole_sort],"Hole_sort")
-    for hole,dist in it.zip_longest(holes[hole_sort],dists[hole_sort]):
-        print(dist, hole, piles,"START")
-        dist_min = np.min(dist)
-        min_index = list(dist).index(dist_min)
-#        print(dist)
-#        print(piles)
-#        print(dif_vec)
-        min_pile = piles[min_index]
-        dif = hole + min_pile
-        dif_vec.append(dif)
-        cost = (hole-dif)*dist_min
-        costs.append(cost)
-#        print(cost,"CURRENT COST")
-#        print(dif,"CURRENT DIFFERENCE")
-#        print(piles)
-        print(dist, hole, min_pile, dif, dist_min, min_index)
-#        if dif >=0:
-        dists = np.delete(dists[hole_sort],min_index,axis=1)
-        piles = np.delete(piles,min_index)
-#        else:
-#            try:
-#                piles[min_index] = dif
-#            except IndexError:
-#                piles = np.array([dif])
-                
-#        print(dists.shape,"SHAPE")
-#        test = np.arange(np.prod(dists.shape)).reshape(dists.shape)
-#        print(dists.shape)
-#        print(test)
-#        print(test[hole_sort])
-        
-#    print(dists,"DISTS")
-    print(costs,"COST")
-    print(dif_vec,"DIF")
-#    print(piles,"PILES")
-    dif_vec = np.array(dif_vec)
-    if np.sum(np.absolute(dif_vec)):
-        print("|||||||||||||||One more time||||||||||||||||||")
-        costs2 =(subPhi(dists, dif_vec, piles))
-        print(costs,costs2,"$$$$$$$$$$$$$COST$$$$$$$$$$$$$$$$")
-        costs = np.append(costs,costs2)
-        print(costs)
-        return np.sum(costs)
-    else:
-        return np.sum(costs)
-
 
 def subPhi(dists, holes, piles,recursed = False ):
     hole_sort = np.argsort(holes)[::-1]
     pile_sort = np.argsort(piles)
-    test = np.outer(piles*-1,holes)*100
     dif_vec = []
     costs = []
-#    print(dists,holes,piles)
+#    print("SubPhi Incoming Variables",dists,holes,piles)
     
     for hole,dist in it.zip_longest(holes[hole_sort],dists[hole_sort]):
         dist_min = np.min(dist)
@@ -233,14 +126,16 @@ def subPhi(dists, holes, piles,recursed = False ):
         costs.append((hole-dif)*dist_min)
 #        print(dist,hole, min_pile,dif,dist_min)
     dif_vec = np.array(dif_vec)
-    costs = np.sum(costs)
+    costs = np.sum(np.array(costs))
     costs1 = costs
-    if np.sum(np.absolute(dif_vec)):
+#    print(costs,"COSTS",dif_vec,recursed,"\n")
+    if np.sum(np.absolute(dif_vec))>0.000000001:
         recursed =True
-        return costs+subPhi(dists, dif_vec, piles,recursed=recursed)
+        return np.sum(costs+subPhi(dists, dif_vec, piles,recursed=recursed))
     else:
         if not recursed:
             costs1 = 0
+#        print("RETURNING RECURSE",costs,costs1)
         return costs-costs1
 
 # Future functions
@@ -285,24 +180,26 @@ c_state = [1,0,0]
 cm = np.array([])
 gatetypes = ["OR","AND","XOR","OR","OR","OR"]
 gates = [table(i) for i in gatetypes]
-ego_index = 2
-
-
-print(gates)
+ego_index = 0
+#print(gates)
 states = noise(len(c_state))
-print(states)
-
-past_a = past(c_state,gates[ego_index],ego_index)
-print(turn(past_a),"PAST?")
-pastUC_a = pastUC(c_state)
-print(turn(pastUC_a))
+#print(states)
 
 dist_mat = distance_matrix(states)
-for i in dist_mat:
-    print(i)
-    
+print(dist_mat,"DISTANCE MATRIX\n")
+
+print("\nPast Phi Calculation")
+past_a = past(c_state,gates[ego_index],ego_index)
+pastUC_a = pastUC(c_state)
 dif_past = pastUC_a - past_a
-print(turn(pastUC_a),"\n - \n",turn(past_a),"\n = \n",turn(dif_past))
+print(turn(pastUC_a),
+      "Unconstrained Past Vector",
+      "\n - \n",
+      turn(past_a),
+      "Past constrained",
+      "\n = \n",
+      turn(dif_past),
+      "Dif Past\n")
 print('\n')
 
 hole_distP, hole_sizeP, pilesP  = subMat4dif(dif_past,dist_mat)
@@ -310,50 +207,62 @@ print(hole_distP)
 print(hole_sizeP)
 print(pilesP)
 
-print("\nFuture Phi Calculation")
+print("\nFuture Phi Calculation\n")
 node_ucF_prob = list(map(gate2ucF,gates))
 print(node_ucF_prob)
 for label,uc in zip(list(string.ascii_lowercase),node_ucF_prob):
     print(label,uc)
 print('\n')
 ucF_m = uc_future(states,node_ucF_prob)
-print(ucF_m*4,"Unconstrained Future Matrix")
+#print(ucF_m*4,"Unconstrained Future Matrix")
 futureUC_v = ucF_m.prod(1)
-print(turn(futureUC_v),"Unconstrained Future Vector")
-
-noise_a = noise(2)
-print(noise_a)
-
 
 node_F_prob = filterGates(node_ucF_prob,ego_index)
-print(node_F_prob,"Future Probs")
-future = future(states,node_F_prob,ego_index)
-print(turn(future),"Future\n")
-dif_future = futureUC_v-future
-print(turn(dif_future),"Dif Future\n")
-hole_dist, hole_size, piles  = subMat4dif(dif_future,dist_mat)
+future_a = future(states,node_F_prob,ego_index)
+dif_future = futureUC_v-future_a
+
+print(turn(futureUC_v),
+      "Unconstrained Future Vector",
+      "\n - \n",
+      turn(future_a),
+      "Future constrained",
+      "\n = \n",
+      turn(dif_future),
+      "Dif Future\n")
+
+hole_distF, hole_sizeF, pilesF  = subMat4dif(dif_future,dist_mat)
 
 print("_________________\nEMD PAST\n_________________")
 phi_past = subPhi(hole_distP, hole_sizeP, pilesP)
-
+#print("Past inputs\n",hole_distP, hole_sizeP, pilesP)
 print(phi_past,"PHI PAST")
+
 print("_________________\nEMD FUTURE\n_________________")
-phi_future = subPhi(hole_dist, hole_size, piles)
-print(phi_future,"FUTURE PHI") 
-#for i,j in zip(dif_future,dist_mat):
-#    space = 10-len(str(i))
-#    spacing = " "*space
-#    print(spacing,i,j)
-#print(hole_dist)
-#print(hole_distP)
+phi_future = subPhi(hole_distF, hole_sizeF, pilesF)
+#print("Futrue inputs\n",hole_distF, hole_sizeF, pilesF)
+print(phi_future,"FUTURE PHI\n") 
 
-   
-    
+def PastPhi(ego_index,gates,all_states,dist_matrix):
+    pastC_a = past(c_state,gates[ego_index],ego_index)
+    pastUC_a = pastUC(c_state)
+#    print("PAST PHI DIF\nP ",pastUC_a,"\nUP",pastC_a)
+    dif_past = pastUC_a - pastC_a
+#    print("PAST PHI SubMat input\n",dif_past,"\n",dist_matrix)
+    out = subMat4dif(dif_past,dist_matrix)
+    return subPhi(out[0],out[1],out[2])
 
-#print("_________________\nEMD Test\n_________________")
-#print(futureUC_v,"FUTRUE_UC")
-#print(future*-1,"FUTURE")
-##dist_mat,"dist_mat"
-#phi_future = subPhi(dist_mat, future, futureUC_v*-1)
-#print(phi_future)
-    
+def FuturePhi(ego_index,gates,all_states,dist_matrix):
+    nodeUC_prob =list(map(gate2ucF,gates))
+    futureUC = uc_future(all_states,list(map(gate2ucF,gates))).prod(1)
+    node_F_prob = filterGates(nodeUC_prob,ego_index)
+    futureConstrained = future(all_states,node_F_prob,ego_index)
+    dif_future = futureUC-futureConstrained
+    out = subMat4dif(dif_future,dist_matrix)
+    return subPhi(out[0],out[1],out[2])
+
+print(PastPhi(0,gates,states,dist_mat),"PAST PHI Ego=0")
+print(FuturePhi(0,gates,states,dist_mat),"FUTURE PHI Ego=0\n__________________")
+print(PastPhi(1,gates,states,dist_mat),"PAST PHI Ego=1")
+print(FuturePhi(1,gates,states,dist_mat),"FUTURE PHI Ego=1\n__________________")
+print(PastPhi(2,gates,states,dist_mat),"PAST PHI Ego=2")
+print(FuturePhi(2,gates,states,dist_mat),"FUTURE PHI Ego=2\n__________________")
