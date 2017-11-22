@@ -111,26 +111,33 @@ def subMat4dif(dif,mat):
     return submat,dif[dif>0],dif[dif<=0]
 
 
-def subPhi(dists, holes, piles,recursed = False ):
+def subPhi(dists, holes, piles,recursed = 0 ):
     hole_sort = np.argsort(holes)[::-1]
     pile_sort = np.argsort(piles)
     dif_vec = []
     costs = []
-#    print("SubPhi Incoming Variables",dists,holes,piles)
+#    if not recursed:print(" SubPhi Incoming Variables\n",dists,"\n\t",holes,"\n\t",piles)
     
     for hole,dist in it.zip_longest(holes[hole_sort],dists[hole_sort]):
+#        dist_min = np.min(dist)
+        dist = dist[np.nonzero(piles)]
+        piles = piles[np.nonzero(piles)]
+#        print("TEST",dist, piles,dist[np.nonzero(piles)],np.nonzero(piles))
         dist_min = np.min(dist)
+#        print(dist_min,"MIN")
         min_pile = piles[list(dist).index(dist_min)]
         dif = hole + min_pile
         dif_vec.append(dif)
         costs.append((hole-dif)*dist_min)
+#        print(costs,sum(costs))
 #        print(dist,hole, min_pile,dif,dist_min)
     dif_vec = np.array(dif_vec)
     costs = np.sum(np.array(costs))
     costs1 = costs
-#    print(costs,"COSTS",dif_vec,recursed,"\n")
-    if np.sum(np.absolute(dif_vec))>0.000000001:
-        recursed =True
+#    print(" COSTS",costs,dif_vec,recursed,"\n")
+    
+    if np.sum(dif_vec)>0.000000001 and recursed < 10:
+        recursed += 1
         return np.sum(costs+subPhi(dists, dif_vec, piles,recursed=recursed))
     else:
         if not recursed:
@@ -178,7 +185,7 @@ def filterGates(gates,index):
 
 c_state = [1,0,0]
 cm = np.array([])
-gatetypes = ["OR","AND","XOR","OR","OR","OR"]
+gatetypes = ["OR","AND","XOR"]#,"OR","OR","OR"]
 gates = [table(i) for i in gatetypes]
 ego_index = 0
 #print(gates)
@@ -191,6 +198,10 @@ print(dist_mat,"DISTANCE MATRIX\n")
 print("\nPast Phi Calculation")
 past_a = past(c_state,gates[ego_index],ego_index)
 pastUC_a = pastUC(c_state)
+### Partitioned from Web: [1,0,0] [OR,AND,XOR]
+#pastUC_a = np.array([0.08333333333333333]*4+[0.16666666666666666]*4)
+### Partitioned from Web:
+#pastUC_a = np.array([0,0,0,0,0.25,0.25,0.25,0.25])
 dif_past = pastUC_a - past_a
 print(turn(pastUC_a),
       "Unconstrained Past Vector",
@@ -201,6 +212,7 @@ print(turn(pastUC_a),
       turn(dif_past),
       "Dif Past\n")
 print('\n')
+
 
 hole_distP, hole_sizeP, pilesP  = subMat4dif(dif_past,dist_mat)
 print(hole_distP)
@@ -232,19 +244,19 @@ print(turn(futureUC_v),
 
 hole_distF, hole_sizeF, pilesF  = subMat4dif(dif_future,dist_mat)
 
-print("_________________\nEMD PAST\n_________________")
+print("_________________\nEMD PAST\n")
 phi_past = subPhi(hole_distP, hole_sizeP, pilesP)
 #print("Past inputs\n",hole_distP, hole_sizeP, pilesP)
 print(phi_past,"PHI PAST")
 
-print("_________________\nEMD FUTURE\n_________________")
+print("_________________\nEMD FUTURE\n")
 phi_future = subPhi(hole_distF, hole_sizeF, pilesF)
 #print("Futrue inputs\n",hole_distF, hole_sizeF, pilesF)
-print(phi_future,"FUTURE PHI\n") 
+print(phi_future,"FUTURE PHI\n_________________\n_________________") 
 
-def PastPhi(ego_index,gates,all_states,dist_matrix):
-    pastC_a = past(c_state,gates[ego_index],ego_index)
-    pastUC_a = pastUC(c_state)
+def PastPhi(ego_index,gates,current_state,all_states,dist_matrix):
+    pastC_a = past(current_state,gates[ego_index],ego_index)
+    pastUC_a = pastUC(current_state)
 #    print("PAST PHI DIF\nP ",pastUC_a,"\nUP",pastC_a)
     dif_past = pastUC_a - pastC_a
 #    print("PAST PHI SubMat input\n",dif_past,"\n",dist_matrix)
@@ -260,9 +272,28 @@ def FuturePhi(ego_index,gates,all_states,dist_matrix):
     out = subMat4dif(dif_future,dist_matrix)
     return subPhi(out[0],out[1],out[2])
 
-print(PastPhi(0,gates,states,dist_mat),"PAST PHI Ego=0")
+print(PastPhi(0,gates,c_state,states,dist_mat),"PAST PHI Ego=0")
 print(FuturePhi(0,gates,states,dist_mat),"FUTURE PHI Ego=0\n__________________")
-print(PastPhi(1,gates,states,dist_mat),"PAST PHI Ego=1")
+print(PastPhi(1,gates,c_state,states,dist_mat),"PAST PHI Ego=1")
 print(FuturePhi(1,gates,states,dist_mat),"FUTURE PHI Ego=1\n__________________")
-print(PastPhi(2,gates,states,dist_mat),"PAST PHI Ego=2")
+print(PastPhi(2,gates,c_state,states,dist_mat),"PAST PHI Ego=2")
 print(FuturePhi(2,gates,states,dist_mat),"FUTURE PHI Ego=2\n__________________")
+
+print("PHI for all combinations of State and Gate")
+def Phi_for_all_binary(node_number,gate_types,truth_table): 
+    labels = list(string.ascii_uppercase)
+    output_string = ""
+    states =noise(node_number)
+    gate_types_combi = list(it.product(gate_types,repeat=3))
+    for gate_types,C_state in it.product(list(gate_types_combi),list(states)):
+        gates = [table(i) for i in list(gate_types)]
+        output_string += "\n------------\nState Possible = \n------------\nPHI for Gates={} and Current States ={}\n_________________\n".format(gate_types,C_state)
+        for node in range(node_number):
+            output_string += "Ego = {}\n  PAST PHI = ".format(labels[node])+str(PastPhi(node,gates,C_state,states,dist_mat)) +"\n   WEB PHI = \n"
+            output_string += "FUTURE PHI = "+ str(FuturePhi(node,gates,states,dist_mat))+"\n   WEB PHI = \n__________________\n"
+    return output_string     
+        
+#Phi_for_all_binary(3,gatetypes,table)
+output = Phi_for_all_binary(3,gatetypes,table)
+with open("Small_Phi_all_nodes=3_gates={}".format(gatetypes),'w') as outfile:
+    outfile.write(output)
