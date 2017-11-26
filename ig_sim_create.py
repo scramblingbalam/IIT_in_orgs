@@ -95,13 +95,22 @@ def create_random_weight_range(n,m,Range=(0,10,1)):
     g.es["weight"]=weights
     return g
 
+def random_weights(Graph,percision=3):
+    """
+    Adds random weights between 1 and 0 with a given percision
+    """
+    percisionStr = "{"+"0:.{}f".format(percision)+"}"
+    float(percisionStr.format(random.random()))
+    Graph.es['weight'] = [float(percisionStr.format(random.random())) for i in range(Graph.ecount())]    
+    return Graph
+
+
 def create_random_weighted(n,m,percision = 3):
     g = ig.Graph(directed = True)
     g.is_weighted()
     g.add_vertices(n)
-    node_mat = list(it.permutations(range(n),2))
-    for i,j in sorted(node_mat):
-        g[i,j] = float(str(random.random())[2+percision:])
+    g.add_edges(random.sample(list(it.permutations(range(n),2)),m))
+    g = random_weights(g,percision=percision)
     return g
 
 
@@ -226,14 +235,31 @@ def change_reciprocity_ratio(Graph,r):
 #    #myTrans <- numerator/denominator
 #    return np.true_divide(numerator,denominator)
 
-def random_weights(Graph,percision=3):
-    """
-    Adds random weights between 1 and 0 with a given percision
-    """
-    percisionStr = "{"+"0:.{}f".format(percision)+"}"
-    float(percisionStr.format(random.random()))
-    Graph.es['weight'] = [float(percisionStr.format(random.random())) for i in range(Graph.ecount())]    
+def pairwise(iterable):
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = it.tee(iterable)
+    next(b, None)
+    return zip(a, b)
 
+def conductance(g,i,j):
+    """ calculates the conductance between two nodes in a graph
+        ARGS:
+            g a graph
+            i index of starting node
+            j index of ending node
+        returns:
+            float: conductance mesasure
+    """
+    paths = find_all_paths(g, i, j)
+    for path in list(paths):
+        path_pairs = list(pairwise(path))
+        path_eids = g.get_eids(pairs = path_pairs)
+        Wkl = np.array(g.es[path_eids]['weight'])
+        path_starts = [i[0] for i in path_pairs]
+        Dk = np.array(g.vs[path_starts].degree(mode='OUT'))    
+        Conductance = sum(Wkl/Dk)
+#        print("Conducatnace between {} & {} = ".format(i,j), Conductance)
+    return Conductance
 
 
 
@@ -242,8 +268,8 @@ if __name__ == "__main__":
     client = MongoClient('localhost', 27017)
     db = client.IIT_in_orgs
     
-    n = 300 # number of nodes
-    m = 3000 # number of edges
+    n = 10 # number of nodes
+    m = 50 # number of edges
     p = 0.3 # probability of triad closer
     r = 0.5
     start_node = 0
@@ -261,7 +287,8 @@ if __name__ == "__main__":
     density = graph_density(n,edges)
     print("Density",density)
 #    G = create_random(20,200)
-    G = create_random_weight_range(10,50)
+#    G = create_random_weight_range(n,m)
+    G = create_random_weighted(n,m)
     rr = reciprocity_ratio(G)
     print("reciprocity reatio",rr)
 #    G = ig.Graph.Full(10,directed =True)
@@ -272,12 +299,24 @@ if __name__ == "__main__":
     RR = G.reciprocity()
     print("reciprocity ratio",rr,RR)  
     print(G.ecount())
-    print("Is weighted",G.is_weighted())
-    random_weights(G)
-    print(G.es['weight'])
     print("Reciprocity",G.reciprocity())
     change_reciprocity_ratio(G,r)
     print("Reciprocity",G.reciprocity())
+#    conducTot = sum(i for i in )
+    nodes = G.vs
+    nodes[8]
+    print(G.vcount())
+    print(G.ecount())
+    print(G.es["weight"])
+    conductStart = time.time()
+    print(sum(conductance(G,i,j) for i,j in 
+              it.product(range(G.vcount())[:-1],range(G.vcount())[1:]) ))
+    conductEnd = time.time()
+    print(conductEnd - conductStart)
+    print(G.transitivity_undirected())
+    print(G.transitivity_avglocal_undirected())
+#    for i in it.product(nodes,nodes):
+#        print(i)
 #    print(transitivity(G))
 #    coll_graph = db["node{}_edge{}_p{}%_r{}%_graph".format(n,m,int(p*100),int(r*100))]
 #    ### string that will act as a template for each paths collection 
