@@ -227,7 +227,6 @@ def change_reciprocity_ratio(gd,r):
 def random_weights(Graph,percision=3):
     """
     Adds random weights between 1 and 0 with a given percision
-    "{}0:.2f{}"
     """
     percisionStr = "{"+"0:.{}f".format(percision)+"}"
     float(percisionStr.format(random.random()))
