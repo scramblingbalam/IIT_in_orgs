@@ -189,21 +189,23 @@ def reciprocity_ratio(gd):
 
 
 
-def change_reciprocity_ratio(gd,r):
+def change_reciprocity_ratio(Graph,r):
     if r >= 0.0 and r <= 1.0:
-        rr = reciprocity_ratio(gd) 
-#        r = r *(-1)
+        rr = reciprocity_ratio(Graph) 
         ratio_dif = r-rr
-        print(ratio_dif)
-        edge_dif = ratio_dif*gd.ecount()
-        print(edge_dif)
-        # find possible triplets and  
-        print(gd.get_adjacency(attribute='weight')) #gd.is_mutual(edge)
+        edge_dif = ratio_dif * Graph.ecount()
+        edges = set(Graph.get_edgelist())
+        edgesReverse = set([i[::-1] for i in Graph.get_edgelist()])
+        biEdges = edges & edgesReverse
+        uniEdges = set(edges).difference(set(biEdges))
         if edge_dif < 0:
-            edges2remove = random.sample(gd.get_edgelist(),abs(edge_dif))
-        for i in range(del_times):
-            ran_edge = random.sample(gd.edges())
-            gd.remove_edge(ran_edge[0],ran_edge[1])
+            edges2remove = random.sample(biEdges,abs(int(edge_dif)))
+            eids2remove = Graph.get_eids(pairs = edges2remove)
+            Graph.delete_edges(eids2remove)
+        elif edge_dif > 0:
+            edges2remove = random.sample(uniEdges,abs(int(edge_dif)))
+            eids2remove = Graph.get_eids(pairs = edges2remove)
+            Graph.delete_edges(eids2remove)
     else:
         raise ValueError("value of 'r' must be between 1 and 0")
         
@@ -240,8 +242,8 @@ if __name__ == "__main__":
     client = MongoClient('localhost', 27017)
     db = client.IIT_in_orgs
     
-    n = 100 # number of nodes
-    m = 1000 # number of edges
+    n = 300 # number of nodes
+    m = 3000 # number of edges
     p = 0.3 # probability of triad closer
     r = 0.5
     start_node = 0
@@ -273,7 +275,9 @@ if __name__ == "__main__":
     print("Is weighted",G.is_weighted())
     random_weights(G)
     print(G.es['weight'])
-#    change_reciprocity_ratio(G,r)
+    print("Reciprocity",G.reciprocity())
+    change_reciprocity_ratio(G,r)
+    print("Reciprocity",G.reciprocity())
 #    print(transitivity(G))
 #    coll_graph = db["node{}_edge{}_p{}%_r{}%_graph".format(n,m,int(p*100),int(r*100))]
 #    ### string that will act as a template for each paths collection 
