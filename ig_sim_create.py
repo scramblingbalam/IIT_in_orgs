@@ -82,6 +82,29 @@ def create_random(n,m):
     g.add_edges(sorted(edges))
     return g
 
+def create_random_weight_range(n,m,Range=(0,10,1)):
+    R = Range
+    g = ig.Graph(directed = True)
+    print(g.is_weighted())
+    g.add_vertices(n)
+    print(g.is_weighted())
+    node_mat = list(it.permutations(range(n),2))
+    edges = sorted(random.sample(node_mat,m))
+    g.add_edges(edges)
+    weights = [random.randrange(R[0],R[1],R[2]) for i in edges]
+    g.es["weight"]=weights
+    return g
+
+def create_random_weighted(n,m,percision = 3):
+    g = ig.Graph(directed = True)
+    g.is_weighted()
+    g.add_vertices(n)
+    node_mat = list(it.permutations(range(n),2))
+    for i,j in sorted(node_mat):
+        g[i,j] = float(str(random.random())[2+percision:])
+    return g
+
+
 def create_full_directed(n):
     g = ig.Graph(directed =True)
     g.add_vertices(n)
@@ -165,21 +188,52 @@ def reciprocity_ratio(gd):
     return reciprocal/gd.ecount()
 
 
-     
 
-"""
-clustering coefficent calc for R
-library(igraph)
-# Calculate igraph's transitivity
-G <- erdos.renyi.game(20, .5, "gnp")
-igraphTrans <- transitivity(G)
-# Calculate transitivity from my formula
- A <- as_adj(G)
-A2 <- crossprod(A) # A^2
-numerator <- sum(diag(crossprod(A2, A))) # trace(A^3)
-denominator <- sum(A2) 
-myTrans <- numerator/denominator
-"""
+def change_reciprocity_ratio(gd,r):
+    if r >= 0.0 and r <= 1.0:
+        rr = reciprocity_ratio(gd) 
+#        r = r *(-1)
+        ratio_dif = r-rr
+        print(ratio_dif)
+        edge_dif = ratio_dif*gd.ecount()
+        print(edge_dif)
+        # find possible triplets and  
+        print(gd.get_adjacency(attribute='weight')) #gd.is_mutual(edge)
+        if edge_dif < 0:
+            edges2remove = random.sample(gd.get_edgelist(),abs(edge_dif))
+        for i in range(del_times):
+            ran_edge = random.sample(gd.edges())
+            gd.remove_edge(ran_edge[0],ran_edge[1])
+    else:
+        raise ValueError("value of 'r' must be between 1 and 0")
+        
+        
+
+#def transitivity(G):
+#    #clustering coefficent calc for R
+#    # Calculate transitivity from my formula
+#    #A <- as_adj(G)
+#    A = np.array(G.get_adjacency().data).reshape
+#    print(A.shape)
+#    #A2 <- crossprod(A) # A^2
+#    A2 = np.cross(A,A)
+#    #numerator <- sum(diag(crossprod(A2, A))) # trace(A^3)
+#    numerator = np.sum(np.diag(np.cross(A2,A)))
+#    #denominator <- sum(A2) 
+#    denominator = np.sum(A2)
+#    #myTrans <- numerator/denominator
+#    return np.true_divide(numerator,denominator)
+
+def random_weights(Graph,percision=3):
+    """
+    Adds random weights between 1 and 0 with a given percision
+    "{}0:.2f{}"
+    """
+    percisionStr = "{"+"0:.{}f".format(percision)+"}"
+    float(percisionStr.format(random.random()))
+    Graph.es['weight'] = [float(percisionStr.format(random.random())) for i in range(Graph.ecount())]    
+
+
 
 
 if __name__ == "__main__":
@@ -205,16 +259,23 @@ if __name__ == "__main__":
     print(nodes)
     density = graph_density(n,edges)
     print("Density",density)
-    G = create_random(20,200)
+#    G = create_random(20,200)
+    G = create_random_weight_range(10,50)
     rr = reciprocity_ratio(G)
     print("reciprocity reatio",rr)
-    G = ig.Graph.Full(10,directed =True)
+#    G = ig.Graph.Full(10,directed =True)
     print(G.ecount())
     print(G.density())
     print(graph_density(G.vcount(),G.ecount()))
     rr = reciprocity_ratio(G)
-    print("reciprocity ratio",rr)    
-
+    RR = G.reciprocity()
+    print("reciprocity ratio",rr,RR)  
+    print(G.ecount())
+    print("Is weighted",G.is_weighted())
+    random_weights(G)
+    print(G.es['weight'])
+#    change_reciprocity_ratio(G,r)
+#    print(transitivity(G))
 #    coll_graph = db["node{}_edge{}_p{}%_r{}%_graph".format(n,m,int(p*100),int(r*100))]
 #    ### string that will act as a template for each paths collection 
 #    coll_paths_str = "node{}_edge{}_p{}%_r{}%_paths_".format(n,m,int(p*100),int(r*100),mode)
