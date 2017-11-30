@@ -5,10 +5,8 @@ Created on Mon Nov 27 13:51:40 2017
 
 @author: cdrayton
 """
-import pyphi
+
 import numpy as np
-import nested
-import time
 
 def tableMulti(string):
     string = string.lower()
@@ -41,7 +39,7 @@ def noise(node_num,states = 2):
     return np.array(state_vec)
 
 
-def state2tp(States,Gates,CM):
+def state2tpm(States,Gates,CM):
     tpmTest = []
     for nodes in States:
         vec = []
@@ -52,12 +50,3 @@ def state2tp(States,Gates,CM):
         tpmTest.append(np.array(vec))
     return np.array(tpmTest)
 
-test = [1,1,0.5,0.5]
-orGate = tableMulti("OR")
-andGate = tableMulti("AND")
-norGate = tableMulti("NOR")
-nandGate = tableMulti("NAND")
-print(andGate(test))
-print(orGate(test),"\n")
-print(nandGate(test))
-print(norGate(test))
