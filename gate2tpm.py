@@ -39,7 +39,7 @@ def noise(node_num,states = 2):
     return np.array(state_vec)
 
 
-def state2tpm(States,Gates,CM):
+def states2tpm(States,Gates,CM):
     tpmTest = []
     for nodes in States:
         vec = []
