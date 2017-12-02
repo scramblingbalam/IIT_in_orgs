@@ -46,7 +46,11 @@ def states2tpm(States,Gates,CM):
         for n,j in enumerate(nodes):
             vec_in = nodes[CM[:,n]>=1]
             multiplier = CM[:,n][CM[:,n]>=1]
-            vec.append(Gates[n](vec_in*multiplier))
+            inputs = vec_in * multiplier
+            if inputs.any():
+                vec.append(Gates[n](inputs))
+            else:
+                vec.append(j)
         tpmTest.append(np.array(vec))
     return np.array(tpmTest)
 
