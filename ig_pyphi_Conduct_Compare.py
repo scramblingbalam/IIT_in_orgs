@@ -378,9 +378,7 @@ if __name__ == "__main__":
         print(timeF,"Time Conductance Full")
         print((timeC/timeF)*100,"Percentage faster")
         
-#        print("Full Conductance time",conductEnd - conductStart)
-#        print("\n")
-        
-        ### append dict to CSV row list
+
+
 
         
