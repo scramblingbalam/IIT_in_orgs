@@ -241,6 +241,20 @@ def pairwise(iterable):
     next(b, None)
     return zip(a, b)
 
+def path2edge(iterable,graph):
+    """
+        takes an iterable represnting a path and outputs the edge id 
+    """
+    return (graph.es[graph.get_eid(pair[0],pair[1])] for pair in pairwise(iterable))
+
+def productZero(iterable):
+    if not isinstance(iterable,np.ndarray):
+        iterable = np.array(iterable)
+    if not any(iterable):
+        return 0
+    else:
+        return np.prod(iterable)
+
 def conductance(g,i,j):
     """ calculates the conductance between two nodes in a graph
         ARGS:
@@ -264,12 +278,12 @@ def conductance(g,i,j):
 
 
 if __name__ == "__main__":
-    client = MongoClient()
-    client = MongoClient('localhost', 27017)
-    db = client.IIT_in_orgs
+#    client = MongoClient()
+#    client = MongoClient('localhost', 27017)
+#    db = client.IIT_in_orgs
     
-    n = 10 # number of nodes
-    m = 50 # number of edges
+    n = 100 # number of nodes
+    m = 1000 # number of edges
     p = 0.3 # probability of triad closer
     r = 0.5
     start_node = 0
@@ -308,11 +322,21 @@ if __name__ == "__main__":
     print(G.vcount())
     print(G.ecount())
     print(G.es["weight"])
-    conductStart = time.time()
-    print(sum(conductance(G,i,j) for i,j in 
-              it.product(range(G.vcount())[:-1],range(G.vcount())[1:]) ))
-    conductEnd = time.time()
-    print(conductEnd - conductStart)
+    time1 = time.time()
+    Conductance =sum(conductance(G,edge.tuple[0],edge.tuple[1]) for edge in G.es) 
+    time2 = time.time()
+    timeF1 = time.time()
+    ConductanceF = conductance_full(G)
+    timeF2 = time.time()
+    timeF = timeF2-timeF1
+    timeC = time2-time1
+    print(Conductance,"Conductance")
+    print(ConductanceF,"Conductance Full")
+    print(timeC,"Time Conductance")
+    print(timeF,"Time Conductance Full")
+    print((timeC/timeF)*100,"Percentage faster")
+    
+    
     print(G.transitivity_undirected())
     print(G.transitivity_avglocal_undirected())
 #    for i in it.product(nodes,nodes):
