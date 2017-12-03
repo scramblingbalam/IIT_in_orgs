@@ -16,6 +16,7 @@ import sys
 import gate2tpm as g2t
 import pyphi
 import csv 
+import nested
 
 def find_all_paths(graph, start, end, mode = 'OUT', maxlen = None):
     def find_all_paths_aux(adjlist, start, end, path, maxlen = None):
@@ -85,12 +86,12 @@ def create_random(n,m):
     g.add_edges(sorted(edges))
     return g
 
+def t2eid():
+    return
 def create_random_weight_range(n,m,Range=(0,10,1)):
     R = Range
     g = ig.Graph(directed = True)
-    print(g.is_weighted())
     g.add_vertices(n)
-    print(g.is_weighted())
     node_mat = list(it.permutations(range(n),2))
     edges = sorted(random.sample(node_mat,m))
     g.add_edges(edges)
@@ -108,12 +109,17 @@ def random_weights(Graph,percision=3):
     return Graph
 
 
-def create_random_weighted(n,m,percision = 3):
+def create_random_weighted(n,m,percision = 3,weighted = True,self_loops=False):
     g = ig.Graph(directed = True)
-    g.is_weighted()
     g.add_vertices(n)
-    g.add_edges(random.sample(list(it.permutations(range(n),2)),m))
-    g = random_weights(g,percision=percision)
+    edges = list(it.permutations(range(n),2))
+    if not self_loops:
+        edges = list(filter(lambda x:x[0]!=x[1],edges))
+    g.add_edges(random.sample(list(edges) ,m))
+    if weighted:
+        g = random_weights(g,percision=percision)
+    else:
+        g.es['weight'] = [1]*g.ecount()
     return g
 
 
@@ -244,7 +250,21 @@ def pairwise(iterable):
     next(b, None)
     return zip(a, b)
 
-def conductance(g,i,j):
+def path2edge(iterable,graph):
+    """
+        takes an iterable represnting a path and outputs the edge id 
+    """
+    return (graph.es[graph.get_eid(pair[0],pair[1])] for pair in pairwise(iterable))
+
+def productZero(iterable):
+    if not isinstance(iterable,np.ndarray):
+        iterable = np.array(iterable)
+    if not any(iterable):
+        return 0
+    else:
+        return np.prod(iterable)
+
+def conductance(g,i,j,mode = "OUT",maxlen=None):#, add_attribute = True):
     """ calculates the conductance between two nodes in a graph
         ARGS:
             g a graph
@@ -253,86 +273,72 @@ def conductance(g,i,j):
         returns:
             float: conductance mesasure
     """
-    Conduct = 0.0
-    paths = find_all_paths(g, i, j)
+    Conduct_paths = []
+    paths = find_all_paths(g, i, j, mode=mode, maxlen=maxlen)
     for path in list(paths):
         path_pairs = list(pairwise(path))
         path_eids = g.get_eids(pairs = path_pairs)
         Wkl = np.array(g.es[path_eids]['weight'])
         path_starts = [i[0] for i in path_pairs]
-        Dk = np.array(g.vs[path_starts].degree(mode='OUT'))    
-        Conduct = sum(Wkl/Dk)
-#        print("Conducatnace between {} & {} = ".format(i,j), Conductance)
-    return Conduct
+        Dk = np.array(g.vs[path_starts].degree(mode=mode))  
+        Conduct_paths.append(np.prod(Wkl/Dk))
+    return sum(Conduct_paths)
 
-
+def conductance_full(g,mode = "OUT",maxlen=None):#, add_attribute = True):
+    """ calculates the conductance between two nodes in a graph
+        ARGS:
+            g a graph
+        returns:
+            float: conductance mesasure
+            object: an iGraph graph object with added conduct attributes
+    """
+    Conduct_paths = []
+    path_dict = {(edge.tuple[0],edge.tuple[1]):
+        find_all_paths(g,edge.tuple[0],edge.tuple[1],mode=mode,maxlen=maxlen) 
+        for edge in g.es}
+    g.es['conduct'] = [edge['weight']/g.vs[edge.tuple[0]].degree(mode=mode) for edge in g.es]
+    for nodes, paths in path_dict.items():
+        paths_prods = []
+        for path in paths:
+            conduct_array = np.array( [edge['conduct'] for edge in path2edge(path,g)] )
+            paths_prods.append(productZero(conduct_array))
+        Conduct_paths.append(sum(paths_prods))       
+    return sum(Conduct_paths),g
 
 if __name__ == "__main__":
     time_list = []
     compare_list = []
-    for i in range(10):
+    client = MongoClient()
+    client = MongoClient('localhost', 27017)
+    db = client.IIT_in_orgs
+    for i in range(2):
         compareCSV = {}
         timeCSV = {}
     #    client = MongoClient()
     #    client = MongoClient('localhost', 27017)
     #    db = client.IIT_in_orgs
+        paperN = 100
+        paperM = 5000 
         
         n = 10 # number of nodes
-        m = 50 # number of edges
+        d = graph_density(paperN, paperM)
+        print(d)
+        d = 0.5
+        m = edges4density(d,n)
         p = 0.3 # probability of triad closer
         r = 0.5
-        start_node = 0
-        end_node = 1
-        mode = "OUT"
-    #    print("Nodes",n,"Edges",m,"Prob Triads",p,"Reciprocity",r)
-        density = graph_density(n,m)
-    #    print("Density",density)
-        edges = edges4density(density,n)
-    #    print(edges)
-        density = graph_density(n,edges)
-    #    print("Density",density)
-        nodes = nodes4density(density,m)
-    #    print(nodes)
-        density = graph_density(n,edges)
-    #    print("Density",density)
-    #    G = create_random(20,200)
-    #    G = create_random_weight_range(n,m)
-        G = create_random_weighted(n,m)
-        rr = reciprocity_ratio(G)
-    #    print("reciprocity reatio",rr)
-    #    G = ig.Graph.Full(10,directed =True)
-    #    print(G.ecount())
-    #    print(G.density())
-    #    print(graph_density(G.vcount(),G.ecount()))
-        rr = reciprocity_ratio(G)
-        RR = G.reciprocity()
-    #    print("reciprocity ratio",rr,RR)  
-    #    print("Reciprocity",G.reciprocity())
+        
+        G = create_random_weighted(n,m,weighted=False)
         change_reciprocity_ratio(G,r)
-    #    print("Reciprocity",G.reciprocity())
-    #    conducTot = sum(i for i in )
-        nodes = G.vs
-        nodes[8]
-        conductStart = time.time()
         
-        Conductance =sum(conductance(G,i,j) for i,j in 
-                  it.product(range(G.vcount())[:-1],range(G.vcount())[1:]) )
-        print("Conductance = ",Conductance)
-        compareCSV["Conductance"] = Conductance
-        timeCSV["Conductance"] = Conductance
+        CM = nested.list_convert(np.array,G.get_adjacency())
+        CMw = nested.list_convert(np.array,G.get_adjacency('weight'))
         
-        conductEnd = time.time()
-        print("Full Conductance time",conductEnd - conductStart)
-        CM = G.get_adjacency()
-        CM_w = G.get_adjacency(attribute='weight')
-    
-        CM = g2t.nested.list_convert(np.array,CM)
-    
         G.vs["gate"] = [random.choice(g2t.tableMulti('all')) for i in range(G.vcount())]
         Gates = [g2t.tableMulti(gate) for gate in G.vs['gate']]
         States = g2t.noise(G.vcount())
-        TPM = g2t.state2tp(States,Gates,CM)
-        labels = ('A', 'B', 'C')
+        TPM = g2t.states2tpm(States,Gates,CM)
+        
     
         network = pyphi.Network(TPM, connectivity_matrix=CM)#,
         #                        node_labels=labels)
@@ -341,38 +347,40 @@ if __name__ == "__main__":
         ### In this case, we want the ΦΦ of the entire network, 
         ### so we simply include every node in the network in our subsystem
         
-        node_indices = (i for i in range(G.vcount()))
-        try:
-            subsystem = pyphi.Subsystem(network, state, node_indices)
+        subsystem = pyphi.Subsystem(network, state, range(network.size) )
+#        subsystem = pyphi.Subsystem(network, state, node_indices)
             
-            ### Now we use big_phi() function to compute the ΦΦ of our subsystem:
-            big_phi_time1 = time.time()
+        ### Now we use big_phi() function to compute the ΦΦ of our subsystem:
+#        big_phi_time1 = time.time()
+#        
+#        big_phi = pyphi.compute.big_phi(subsystem)
+#        big_phi_time2 = time.time()
+#
+#        big_phi_time = big_phi_time2 - big_phi_time1
+#        print("BIG PHI = ",big_phi)
+##       print("Calculating Big Phi took: ", big_phi_time)
+#            
+#        compareCSV["Phi"] = big_phi
+#        timeCSV["Phi"] = big_phi_time
+           
+
+        time1 = time.time()
+        Conductance =sum(conductance(G,edge.tuple[0],edge.tuple[1]) for edge in G.es) 
+        time2 = time.time()
+        timeF1 = time.time()
+        ConductanceF, G = conductance_full(G)
+        timeF2 = time.time()
+        timeF = timeF2-timeF1
+        timeC = time2-time1
+        print(Conductance,"Conductance")
+        print(ConductanceF,"Conductance Full")
+        print(timeC,"Time Conductance")
+        print(timeF,"Time Conductance Full")
+        print((timeC/timeF)*100,"Percentage faster")
         
-            big_phi = pyphi.compute.big_phi(subsystem)
-        except:
-            pass
-        big_phi_time2 = time.time()
-        big_phi_time = big_phi_time2 - big_phi_time1
-        print("BIG PHI = ",big_phi)
-        print("Calculating Big Phi took: ", big_phi_time)
+#        print("Full Conductance time",conductEnd - conductStart)
+#        print("\n")
         
-        compareCSV["Phi"] = big_phi
-        timeCSV["Phi"] = big_phi_time
-        print("\n")
-    
-    with open('compare.csv', 'w', newline='') as csvfile:
-        fieldnames = ['Phi', 'Conductance']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-    
-        writer.writeheader()
-        for dic in compare_list:
-            writer.writerow(dic)
-        
-    with open('time.csv', 'w', newline='') as csvfile:
-        fieldnames = ['Phi', 'Conductance']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-    
-        writer.writeheader()
-        for dic in time_list:
-            writer.writerow(dic)
+        ### append dict to CSV row list
+
         
