@@ -9,6 +9,9 @@ Created on Mon Nov 27 13:51:40 2017
 import numpy as np
 
 def tableMulti(string):
+    """
+        takes in a string and returns the multi input boolean function for that Logic Gate
+    """
     string = string.lower()
     gates ={
             "or" :lambda x: 0 if sum(x)<1.0 else 1,#or less than 1
@@ -23,6 +26,9 @@ def tableMulti(string):
         return gates[string]
 
 def index2state_LOLI(i,node_num, states = 2):
+    """
+        outputs a state for a certain number of nodes based on it's index
+    """
     i=int(i)
     forB = "{0:b}".format(i)
     forB = forB[::-1]
@@ -31,6 +37,9 @@ def index2state_LOLI(i,node_num, states = 2):
     return forB
 
 def noise(node_num,states = 2):
+    """
+        output all possible states based on node number
+    """
     state_vec = []
     state_num = states**node_num
     for i in range(state_num):
@@ -40,6 +49,9 @@ def noise(node_num,states = 2):
 
 
 def states2tpm(States,Gates,CM):
+    """
+        creates a transition probability matrix TPM 
+    """
     tpmTest = []
     for nodes in States:
         vec = []
